@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2x_Markys_jogo_da_forca</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000; /* Plano de fundo preto */
+            color: #fff; /* Cor do texto branco para contraste */
+            text-align: center;
+            padding: 50px;
+        }
+        #game-container {
+            margin-top: 20px;
+        }
+        #word {
+            font-size: 24px;
+            letter-spacing: 5px;
+        }
+        #letters {
+            margin: 20px 0;
+        }
+        .letter {
+            font-size: 18px;
+            padding: 10px;
+            border: 1px solid #fff; /* Bordas brancas */
+            margin: 5px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .letter.disabled {
+            cursor: not-allowed;
+            color: #ccc;
+        }
+        #message {
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        #restart-button {
+            display: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #fff;
+            color: #000;
+            border: none;
+        }
+        #hangman {
+            margin: 20px auto;
+            background-color: #fff; /* Fundo branco para o canvas */
+            border: 1px solid #fff;
+            width: 200px;
+            height: 250px;
+        }
+    </style>
+</head>
+<body>
+    <h1>2x_Markys_jogo_da_forca</h1>
+    <div id="game-container">
+        <canvas id="hangman"></canvas>
+        <div id="word">_ _ _ _ _ _ _</div>
+        <div id="letters"></div>
+        <div id="message"></div>
+        <div id="score">Rodada: 1 de 20</div>
+        <button id="restart-button">Recomeçar Jogo</button>
+    </div>
+
+    <script>
+        const words = ["roteador", "firewall", "ethernet", "protocolo", "switch", "servidor", "virtualizacao", "cabo", "ip", "dns", "subrede", "gateway"];
+        let selectedWord = "";
+        let guessedLetters = [];
+        let attempts = 6;
+        let currentRound = 1;
+        const totalRounds = 20;
+        let score = 0;
+        const wordDisplay = document.getElementById('word');
+        const lettersDisplay = document.getElementById('letters');
+        const messageDisplay = document.getElementById('message');
+        const scoreDisplay = document.getElementById('score');
+        const restartButton = document.getElementById('restart-button');
+        const hangmanCanvas = document.getElementById('hangman');
+        const ctx = hangmanCanvas.getContext('2d');
+        hangmanCanvas.width = 200;
+        hangmanCanvas.height = 250;
+
+        function startGame() {
+            selectedWord = words[Math.floor(Math.random() * words.length)];
+            guessedLetters = [];
+            attempts = 6;
+            clearCanvas();
+            drawHangman(0); // Desenha a forca sem o boneco no início do jogo
+            displayWord();
+            displayLetters();
+            messageDisplay.textContent = '';
+            updateScore();
+            restartButton.style.display = 'none';
+        }
+
+        function displayWord() {
+            const wordToDisplay = selectedWord.split('').map(letter => guessedLetters.includes(letter) ? letter : '_').join(' ');
+            wordDisplay.textContent = wordToDisplay;
+        }
+
+        function displayLetters() {
+            lettersDisplay.innerHTML = '';
+            const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+            alphabet.forEach(letter => {
+                const letterElement = document.createElement('span');
+                letterElement.textContent = letter;
+                letterElement.classList.add('letter');
+                if (guessedLetters.includes(letter)) {
+                    letterElement.classList.add('disabled');
+                } else {
+                    letterElement.addEventListener('click', () => guessLetter(letter));
+                }
+                lettersDisplay.appendChild(letterElement);
+            });
+        }
+
+        function guessLetter(letter) {
+            guessedLetters.push(letter);
+            if (selectedWord.includes(letter)) {
+                displayWord();
+                checkWin();
+            } else {
+                attempts--;
+                drawHangman(6 - attempts); // Desenha partes do boneco com base nas tentativas restantes
+                checkLose();
+            }
+            displayLetters();
+        }
+
+        function checkWin() {
+            const currentWord = wordDisplay.textContent.split(' ').join('');
+            if (currentWord === selectedWord) {
+                messageDisplay.textContent = 'Parabéns! Você acertou a palavra!';
+                score++;
+                disableLetters();
+                nextRound();
+            }
+        }
+
+        function checkLose() {
+            if (attempts <= 0) {
+                messageDisplay.textContent = `Você perdeu! A palavra era: ${selectedWord}`;
+                disableLetters();
+                nextRound();
+            }
+        }
+
+        function disableLetters() {
+            const letterElements = document.querySelectorAll('.letter');
+            letterElements.forEach(letter => {
+                letter.classList.add('disabled');
+            });
+        }
+
+        function nextRound() {
+            if (currentRound < totalRounds) {
+                currentRound++;
+                updateScore();
+                setTimeout(startGame, 2000); // Espera 2 segundos antes de iniciar a próxima rodada
+            } else {
+                messageDisplay.textContent = `Fim de Jogo! Você acertou ${score} de ${totalRounds} palavras.`;
+                restartButton.style.display = 'inline-block';
+            }
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Rodada: ${currentRound} de ${totalRounds}`;
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, hangmanCanvas.width, hangmanCanvas.height);
+        }
+
+        function drawHangman(step) {
+            switch(step) {
+                case 0: // Forca
+                    ctx.beginPath();
+                    ctx.moveTo(50, 225);
+                    ctx.lineTo(150, 225);
+                    ctx.moveTo(100, 225);
+                    ctx.lineTo(100, 25);
+                    ctx.lineTo(150, 25);
+                    ctx.lineTo(150, 50);
+                    ctx.stroke();
+                    break;
+                case 1: // Cabeça
+                    ctx.beginPath();
+                    ctx.arc(150, 70, 20, 0, Math.PI * 2, true);
+                    ctx.stroke();
+                    break;
+                case 2: // Corpo
+                    ctx.beginPath();
+                    ctx.moveTo(150, 90);
+                    ctx.lineTo(150, 150);
+                    ctx.stroke();
+                    break;
+                case 3: // Braço Esquerdo
+                    ctx.beginPath();
+                    ctx.moveTo(150, 100);
+                    ctx.lineTo(120, 130);
+                    ctx.stroke();
+                    break;
+                case 4: // Braço Direito
+                    ctx.beginPath();
+                    ctx.moveTo(150, 100);
+                    ctx.lineTo(180, 130);
+                    ctx.stroke();
+                    break;
+                case 5: // Perna Esquerda
+                    ctx.beginPath();
+                    ctx.moveTo(150, 150);
+                    ctx.lineTo(120, 180);
+                    ctx.stroke();
+                    break;
+                case 6: // Perna Direita
+                    ctx.beginPath();
+                    ctx.moveTo(150, 150);
+                    ctx.lineTo(180, 180);
+                    ctx.stroke();
+                    break;
+            }
+        }
+
+        restartButton.addEventListener('click', () => {
+            currentRound = 1;
+            score = 0;
+            startGame();
+        });
+
+        startGame();
+    </script>
+</body>
+</html>
